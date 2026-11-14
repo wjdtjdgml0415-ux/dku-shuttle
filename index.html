@@ -4,14 +4,18 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>셔틀 편하게 타기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --bg: #f4f6f9; --card: #fff; --text: #1d2330; --sub: #6b7385; --line: #e3e7ee;
-    --primary: #1f5eff; --primary-weak: #e8efff;
-    --ok: #16a34a; --mid: #d97706; --busy: #dc2626; --gray: #9aa1af;
+    /* 단국대 포털 색상 기준 */
+    --bg: #f7f8fb; --card: #fff; --text: #333333; --sub: #666666; --line: #dadfe6;
+    --primary: #004898; --primary-dark: #003b7d; --primary-mid: #266dbc; --accent: #659fe0; --primary-weak: #f1f7fd;
+    --ok: #16a34a; --mid: #d97706; --busy: #e0484b; --gray: #9a9ea6;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  body { margin: 0; font-family: "Noto Sans KR", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
          background: var(--bg); color: var(--text); }
   .app { max-width: 480px; margin: 0 auto; min-height: 100vh; padding: 16px 16px 88px; }
   header h1 { font-size: 20px; margin: 4px 0 2px; }
@@ -148,6 +152,76 @@
   .who + button { margin-top: 4px; padding: 4px 10px; font-size: 12px; }
   .muted { color: var(--sub); font-size: 13px; }
   .hidden { display: none; }
+  /* ---------- 단국대 포털 스타일 테마 ---------- */
+  /* 상단: 포털처럼 단국 블루 가로 바 */
+  header { background: var(--primary); color: #fff; margin: -16px -16px 16px; padding: 14px 16px 12px; }
+  header h1 { font-size: 19px; font-weight: 700; letter-spacing: -.3px; }
+  header p { color: rgba(255,255,255,.8); margin: 0; }
+  header .who { color: #fff; }
+  header button.btn.ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.5); }
+  header button.btn.ghost:hover:not(:disabled) { background: var(--primary-dark); }
+  /* 카드·버튼: 얇은 테두리 + 5~6px 모서리 */
+  .card { border-radius: 8px; border: 1px solid var(--line); box-shadow: none; }
+  .next { border: 0; }
+  .next .time { letter-spacing: -1px; }
+  button.btn { border-radius: 6px; font-weight: 500; }
+  button.btn:hover:not(:disabled) { background: var(--primary-dark); }
+  button.btn.sub { background: var(--primary-weak); color: var(--primary); border: 1px solid #cfe0f5; }
+  button.btn.sub:hover:not(:disabled) { background: #e3eefb; }
+  button.btn.ghost { background: #fff; color: var(--text); border: 1px solid var(--line); }
+  button.btn.ghost:hover:not(:disabled) { background: #f3f3f3; }
+  button.btn.danger { background: #fff1f1; color: var(--busy); border: 1px solid #f6c9ca; }
+  button.btn.danger:hover { background: #ffe4e4; }
+  .next button.btn:hover:not(:disabled) { background: #f1f7fd; }
+  .next .btns button.btn.alt { border: 1px solid rgba(255,255,255,.5); background: transparent; }
+  .next .btns button.btn.alt:hover { background: var(--primary-dark); }
+  input, select, textarea { border-radius: 5px; border-color: #d6d7d9; font-family: inherit; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(101,159,224,.2); }
+  .search input[type=search] { background: var(--primary-weak); }
+  /* 세그먼트·칩 */
+  .seg { background: #e9edf3; border-radius: 6px; }
+  .seg button { border-radius: 5px; font-weight: 500; }
+  .seg button.on { color: var(--primary); font-weight: 700; }
+  .chip { border-color: #d6d7d9; }
+  .chip.on { background: var(--primary); border-color: var(--primary); }
+  .chip:not(.on):hover { border-color: var(--accent); color: var(--primary); }
+  /* 배지 */
+  .b-blue { background: var(--primary-weak); color: var(--primary); }
+  .b-fest { background: #fff; color: var(--primary-mid); box-shadow: inset 0 0 0 1px var(--accent); }
+  /* 공지 배너: 블루 계열 */
+  /* 상단 파란 바와 겹치지 않게: 연한 배경 + 왼쪽 띠 */
+  .banner { background: var(--primary-weak); color: var(--text); border: 1px solid #cfe0f5; border-left: 4px solid var(--primary-mid); border-radius: 8px; box-shadow: none; }
+  .banner .k { color: var(--primary-mid); opacity: 1; font-weight: 700; }
+  .banner .ttl { color: var(--text); }
+  .banner .s { color: var(--primary); opacity: 1; font-weight: 500; }
+  .banner:hover { background: #e3eefb; }
+  .banner.plain { background: #fff; border-color: var(--line); border-left-color: var(--gray); }
+  .banner.plain .k { color: var(--sub); }
+  .banner.plain .s { color: var(--sub); }
+  .banner.plain:hover { background: #f7f8fb; }
+  .xchip { background: var(--primary-weak); color: var(--primary); }
+  /* 안내 박스: 포털의 안내 문구 스타일 */
+  .ntc .times { background: var(--primary-weak); color: var(--primary); }
+  .tbl th { background: #f7f8fb; color: var(--text); font-weight: 500; }
+  .tbl .grp td { background: var(--primary-weak); color: var(--primary); }
+  .tbl td.two { color: var(--primary); }
+  .tbl td.off { color: #ee6c6e; }
+  .cmts { background: var(--primary-weak); }
+  /* 관리자 페이지 상단 */
+  .admin-head { background: var(--primary-dark); color: #fff; border: 0; }
+  /* 통계 */
+  .stat { border: 1px solid var(--line); border-radius: 8px; }
+  .stat b { color: var(--primary); }
+  .chart .col i { background: var(--accent); }
+  .chart .col.peak i { background: var(--primary); }
+  /* 하단 메뉴 */
+  nav { border-top: 1px solid var(--line); box-shadow: 0 -2px 8px rgba(79,79,79,.06); }
+  nav button { font-weight: 500; position: relative; }
+  nav button.on { color: var(--primary); }
+  nav button.on::before { content: ""; position: absolute; top: 0; left: 25%; right: 25%; height: 3px; background: var(--primary); border-radius: 0 0 3px 3px; }
+  .toast { background: #333; }
+  /* 로그인 화면: 포털 로그인 버튼 느낌 */
+  #auth #liBtn, #auth #suBtn { height: 48px; font-size: 16px; }
 </style>
 </head>
 <body>
@@ -263,7 +337,7 @@
 
   <!-- 관리: 금일 운행 정보 등록 / 시간표 등록 -->
   <section id="tab-admin" class="hidden">
-    <div class="card" style="background:#1d2330;color:#fff">
+    <div class="card admin-head">
       <div style="font-size:12px;opacity:.7">ADMIN</div>
       <div style="font-size:18px;font-weight:700;margin:2px 0">🛠 관리자 페이지</div>
       <div style="font-size:13px;opacity:.85">운행 정보 · 시간표 · 학교 공지 · 회원을 관리해요. 분실물 글도 모두 수정·삭제할 수 있어요.</div>
