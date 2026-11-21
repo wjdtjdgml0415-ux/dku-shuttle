@@ -222,6 +222,11 @@
   .toast { background: #333; }
   /* 로그인 화면: 포털 로그인 버튼 느낌 */
   #auth #liBtn, #auth #suBtn { height: 48px; font-size: 16px; }
+  /* Netlify 무료 플랜의 오른쪽 아래 'Powered by Netlify' 배지(숨길 수 없음)와 겹치지 않게
+     Netlify 주소에서 열 때만 하단 메뉴를 배지 높이만큼 위로 올림 */
+  body.nl-badge nav { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
+  body.nl-badge .app { padding-bottom: 150px; }
+  body.nl-badge .toast { bottom: 140px; }
 </style>
 </head>
 <body>
@@ -1353,6 +1358,7 @@ $('demoReset').onclick = adminOnly(() => {
   S = { ...fresh(), users: S.users, session: S.session }; save(); render(); toast('초기화했어요 (계정은 유지)');
 });
 
+if (/\.netlify\.app$/.test(location.hostname)) document.body.classList.add('nl-badge');
 render();
 setInterval(render, 30000);
 </script>
