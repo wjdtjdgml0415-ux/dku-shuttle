@@ -426,7 +426,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const KEY = 'shuttle-demo-v4';
+const KEY = 'shuttle-demo-v5';
 const SEATS_PER_BUS = 45;           // 셔틀 1대당 좌석 수 (가정)
 const DAYS = ['월', '화', '수', '목', '금'];
 const pad = n => String(n).padStart(2, '0');
@@ -462,21 +462,39 @@ function officialSchedule() {
 // 지난 7일 시간대별 탑승 체크 누적 (시연용 가상 데이터)
 const sampleHistory = () => ({ 8: 420, 9: 610, 10: 70, 12: 40, 15: 95, 16: 310, 17: 280, 18: 120 });
 
-// 분실물 예시 데이터
+// 분실물 예시 데이터 (목데이터)
 function sampleLost() {
   const d = n => { const x = new Date(); x.setDate(x.getDate() - n); return dateKey(x); };
+  const ago = h => Date.now() - h * 3600e3;
+  const c = (id, author, text, h) => ({ id, author, text, at: ago(h) });
+  const L = (o) => ({ status: 'open', photo: '', comments: [], ...o });
   return [
-    { id: 1, type: '습득', title: '에어팟 프로 (흰색 케이스)', route: '두정역 → 학교', date: d(1), where: '08:45 차, 뒷좌석 바닥',
-      desc: '케이스에 곰돌이 스티커가 붙어 있어요.', contact: '학생회관 1층 셔틀 사무실에 맡김', status: 'open', photo: '', author: 'admin' },
-    { id: 2, type: '분실', title: '검정 체크 우산', route: '학교 → 천안역', date: d(2), where: '16:30 차, 앞쪽 좌석',
-      desc: '손잡이가 나무로 된 장우산입니다.', contact: '에브리타임 쪽지 주세요 (예시)', status: 'open', photo: '', author: 'student',
-      comments: [{ id: 1, author: 'admin', text: '셔틀 사무실에 비슷한 우산이 들어왔어요. 학생회관 1층에서 확인해 보세요.', at: Date.now() - 3600e3 }] },
-    { id: 3, type: '습득', title: '전공 서적 「경제학원론」', route: '학교 → 두정역', date: d(4), where: '17:10 차',
-      desc: '이름은 없고 형광펜 필기가 많아요.', contact: '학생회관 1층 셔틀 사무실에 맡김', status: 'done', photo: '', author: 'admin' },
+    L({ id: 1, type: '습득', title: '에어팟 프로 (흰색 케이스)', route: '두정역 → 학교', date: d(1), where: '08:45 차, 뒷좌석 바닥',
+      desc: '케이스에 곰돌이 스티커가 붙어 있어요.', contact: '학생회관 1층 셔틀 사무실에 맡김', author: 'admin',
+      comments: [c(1, 'lee02', '혹시 왼쪽 유닛에 이니셜 각인 있나요?', 20), c(2, 'admin', '각인은 없어요. 케이스 스티커로 확인 가능해요.', 19)] }),
+    L({ id: 2, type: '분실', title: '검정 체크 우산', route: '학교 → 천안역', date: d(2), where: '16:30 차, 앞쪽 좌석',
+      desc: '손잡이가 나무로 된 장우산입니다.', contact: '에브리타임 쪽지 주세요 (예시)', author: 'student',
+      comments: [c(1, 'admin', '셔틀 사무실에 비슷한 우산이 들어왔어요. 학생회관 1층에서 확인해 보세요.', 30)] }),
+    L({ id: 3, type: '습득', title: '전공 서적 「경제학원론」', route: '학교 → 두정역', date: d(4), where: '17:10 차',
+      desc: '이름은 없고 형광펜 필기가 많아요.', contact: '학생회관 1층 셔틀 사무실에 맡김', status: 'done', author: 'admin',
+      comments: [c(1, 'park03', '제 책이에요! 사무실에서 찾아갔습니다 감사합니다 🙏', 50)] }),
+    L({ id: 4, type: '분실', title: '갈색 반지갑', route: '두정역 → 학교', date: d(0), where: '09:00 차 (2대 중 뒤차)',
+      desc: '안에 학생증과 체크카드가 있어요. 사례하겠습니다.', contact: '010-0000-0000 (예시)', author: 'kim01',
+      comments: [c(1, 'choi04', '저도 그 차 탔는데 내릴 때 바닥에 뭐가 떨어져 있었던 것 같아요', 2), c(2, 'kim01', '헉 감사해요! 사무실에 물어볼게요', 1)] }),
+    L({ id: 5, type: '습득', title: '노트북 충전기 (USB-C, 65W)', route: '학교 → 천안터미널', date: d(1), where: '17:00 차, 맨 뒷줄',
+      desc: '흰색 충전기, 케이블에 빨간 마스킹테이프가 감겨 있어요.', contact: '학생회관 1층 셔틀 사무실에 맡김', author: 'jung05' }),
+    L({ id: 6, type: '분실', title: '하늘색 텀블러', route: '천안역 → 학교', date: d(1), where: '08:50 차',
+      desc: '스타벅스 하늘색 텀블러, 뚜껑에 흠집 있음', contact: '에브리타임 쪽지 (예시)', author: 'lee02',
+      comments: [c(1, 'student', '오늘 아침 차 창가 컵홀더에 비슷한 거 있었어요!', 5)] }),
+    L({ id: 7, type: '습득', title: '애플펜슬 2세대', route: '두정역 → 학교', date: d(3), where: '08:40 차, 가운데 좌석 틈',
+      desc: '본체만 있어요. 펜 끝에 파란 커버.', contact: '학생회관 1층 셔틀 사무실에 맡김', author: 'admin' }),
+    L({ id: 8, type: '분실', title: '체육복 가방 (남색)', route: '학교 → 두정역', date: d(5), where: '18:10 차',
+      desc: '안에 체육복과 운동화가 들어 있어요.', contact: '010-0000-0000 (예시)', status: 'done', author: 'park03',
+      comments: [c(1, 'admin', '사무실에 보관 중이었어요. 찾아가셨습니다.', 70)] }),
   ];
 }
 
-// 학교 공지 예시 (축제 기간 = 오늘부터 3일, 시연용 가상 공지)
+// 학교 공지 예시 (목데이터: 축제 기간 = 오늘부터 3일)
 function sampleNotices() {
   const d = n => { const x = new Date(); x.setDate(x.getDate() + n); return dateKey(x); };
   return [
@@ -490,6 +508,14 @@ function sampleNotices() {
       ] },
     { id: 2, title: '셔틀 탑승 시 학생증을 지참해 주세요', tag: '', from: d(-3), to: d(30),
       body: '탑승 시 학생증 확인이 있을 수 있습니다. 모바일 학생증도 가능합니다.', extra: [] },
+    { id: 3, title: '📚 기말고사 기간 등교 셔틀 증편', tag: '시험 증편', from: d(17), to: d(28),
+      body: '기말고사 기간에는 아침 등교 셔틀을 일찍부터 추가 운행합니다.',
+      extra: [
+        { route: '두정역 → 학교', time: '08:00', buses: 2 }, { route: '두정역 → 학교', time: '08:15', buses: 2 },
+        { route: '천안역 → 학교', time: '08:20', buses: 1 },
+      ] },
+    { id: 4, title: '도로 공사로 천안역 정류장 임시 이동', tag: '', from: d(-14), to: d(-2),
+      body: '공사 기간 동안 천안역 정류장이 동부광장 50m 앞으로 임시 이동했습니다. (종료)', extra: [] },
   ];
 }
 
@@ -502,9 +528,11 @@ function hashPw(id, pw) {   // 비밀번호를 그대로 저장하지 않기 위
   h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
   return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
 }
+// 목데이터 계정 (학생 비밀번호는 모두 1234)
 const sampleUsers = () => [
   { id: 'admin', name: '셔틀 관리자', role: 'admin', pw: hashPw('admin', 'admin1234') },
-  { id: 'student', name: '데모 학생', role: 'student', pw: hashPw('student', '1234') },
+  ...[['student', '데모 학생'], ['kim01', '김민준'], ['lee02', '이서연'], ['park03', '박지호'], ['choi04', '최유나'], ['jung05', '정하늘']]
+    .map(([id, name]) => ({ id, name, role: 'student', pw: hashPw(id, '1234') })),
 ];
 
 function fresh() { return { schedule: officialSchedule(), history: sampleHistory(), lost: sampleLost(), notices: sampleNotices(), users: sampleUsers(), session: null, day: null, demoTime: '', demoDay: '' }; }
@@ -568,8 +596,37 @@ function weekday() {
 // 날짜가 바뀌면 금일 운행 정보·탑승 체크 초기화
 function day() {
   const k = dateKey(new Date()) + '/' + weekday();
-  if (!S.day || S.day.date !== k) S.day = { date: k, status: {}, boardings: {}, mine: {}, waiting: {}, mineWait: {} };
+  if (!S.day || S.day.date !== k) { S.day = { date: k, status: {}, boardings: {}, mine: {}, waiting: {}, mineWait: {} }; mockDay(S.day); }
   return S.day;
+}
+// 목데이터: 오늘 회차마다 탑승·대기 인원을 시간대에 맞게 채움 (같은 날은 항상 같은 숫자)
+function mockDay(d) {
+  let seed = [...d.date].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+  const rand = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+  const busy = r => {   // 시간대별 붐비는 정도 (0~1)
+    const t = toMin(r.time);
+    if (r.dir === '등교') return t >= 520 && t <= 550 ? 0.95 : t >= 510 && t <= 560 ? 0.6 : 0.3;   // 08:40~09:10 피크
+    if (t >= 1260 && t <= 1320) return 0.95;            // 축제 21~22시
+    if (t >= 990 && t <= 1030) return 0.85;             // 16:30~17:10
+    if (t >= 1050 && t <= 1090 || t >= 1200) return 0.55;
+    return 0.3;
+  };
+  todayRuns().forEach(r => {
+    const seats = busesToday(r) * SEATS_PER_BUS;
+    const total = Math.round(seats * busy(r) * (0.7 + rand() * 0.6));
+    const boarded = Math.min(seats, Math.round(total * (0.35 + rand() * 0.3)));
+    if (boarded) d.boardings[r.id] = boarded;
+    if (total - boarded > 0) d.waiting[r.id] = total - boarded;
+  });
+  // 만석 예시: 등교 08:50 두정역, 하교 16:45 두정역
+  [['두정역 → 학교', '08:50'], ['학교 → 두정역', '16:45']].forEach(([rt, t]) => {
+    const r = todayRuns().find(x => x.route === rt && x.time === t);
+    if (r) { d.boardings[r.id] = busesToday(r) * SEATS_PER_BUS; d.waiting[r.id] = 6; }
+  });
+  const late = todayRuns().find(r => r.route === '두정역 → 학교' && r.time === '08:45');
+  if (late) d.status[late.id] = { state: 'delay', delay: 10, note: '교통 정체로 지연' };
+  const off = todayRuns().find(r => r.route === '학교 → 천안터미널' && r.time === '17:30');
+  if (off) d.status[off.id] = { state: 'cancel', delay: 0, note: '차량 점검' };
 }
 
 // ---------- 계산 ----------
