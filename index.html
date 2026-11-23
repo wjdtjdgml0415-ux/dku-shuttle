@@ -59,7 +59,8 @@
   input, select { width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; background: #fff; color: var(--text); }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .full { grid-column: 1 / -1; }
-  .days { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .days .wk span { color: var(--primary-mid); font-weight: 700; }
   .days div { text-align: center; }
   .days span { font-size: 12px; color: var(--sub); display: block; margin-bottom: 2px; }
   .days input { padding: 7px 4px; text-align: center; }
@@ -149,6 +150,18 @@
   .empty { text-align: center; padding: 12px 0; }
   .empty b { display: block; margin-bottom: 4px; }
   .who { font-size: 13px; font-weight: 600; }
+  .tbl th.wk, .tbl td.wk { background: #fbfaf3; }
+  .b-wk { background: #fff7e0; color: #a06a00; }
+  /* 지난 운행일 이용 현황 */
+  .last h2 { margin-bottom: 4px; }
+  .last .chart { height: 96px; padding-top: 14px; gap: 3px; }
+  .last .chart .col.now i { background: var(--primary); }
+  .last .chart .col.now span { color: var(--primary); font-weight: 700; }
+  .last .chart .col.peak i { background: #ee6c6e; }
+  .last .say { font-size: 13px; margin-top: 10px; background: var(--primary-weak); color: var(--primary); border-radius: 6px; padding: 8px 10px; }
+  .last .legend { font-size: 11px; color: var(--sub); margin-top: 6px; display: flex; gap: 10px; }
+  .last .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 3px; vertical-align: middle; }
+  .yd { color: var(--primary-mid); }
   .who + button { margin-top: 4px; padding: 4px 10px; font-size: 12px; }
   .muted { color: var(--sub); font-size: 13px; }
   .hidden { display: none; }
@@ -274,6 +287,7 @@
     <div id="noticeBanner"></div>
     <div class="seg" id="dirSeg"></div>
     <div id="nextCard"></div>
+    <div class="card last" id="lastCard"></div>
 
     <!-- 시간·노선 검색 -->
     <div class="card search">
@@ -390,6 +404,11 @@
         <div class="full"><label>노선</label><input id="addRoute" list="routeList" placeholder="예: 두정역 → 학교" /><datalist id="routeList"></datalist></div>
         <div class="full"><label>탑승 장소</label><input id="addStop" list="stopList" placeholder="예: 서울버스 한솔사진" /><datalist id="stopList"></datalist></div>
         <div class="full"><label>요일별 운행 대수 (0 = 미운행)</label>
+          <div class="row" style="gap:6px;margin-bottom:8px">
+            <button class="btn ghost" style="padding:5px 10px;font-size:12px" data-preset="weekday">평일만</button>
+            <button class="btn ghost" style="padding:5px 10px;font-size:12px" data-preset="weekend">🗓 주말만</button>
+            <button class="btn ghost" style="padding:5px 10px;font-size:12px" data-preset="all">매일</button>
+          </div>
           <div class="days" id="addDays"></div></div>
         <div class="full"><button class="btn" style="width:100%" id="addSave">시간표에 추가</button></div>
       </div>
@@ -405,7 +424,7 @@
       <h2>시연 도구</h2>
       <div class="grid">
         <div><label>시연용 요일</label>
-          <select id="demoDay"><option value="">실제 요일</option><option value="1">월</option><option value="2">화</option><option value="3">수</option><option value="4">목</option><option value="5">금</option></select></div>
+          <select id="demoDay"><option value="">실제 요일</option><option value="1">월</option><option value="2">화</option><option value="3">수</option><option value="4">목</option><option value="5">금</option><option value="6">토</option><option value="7">일</option></select></div>
         <div><label>시연용 시각</label><input id="demoTime" type="time" /></div>
         <div class="full"><button class="btn ghost" style="width:100%" id="demoClear">실제 요일·시각으로 되돌리기</button></div>
       </div>
@@ -433,7 +452,7 @@
 <script>
 const KEY = 'shuttle-demo-v5';
 const SEATS_PER_BUS = 45;           // 셔틀 1대당 좌석 수 (가정)
-const DAYS = ['월', '화', '수', '목', '금'];
+const DAYS = ['월', '화', '수', '목', '금', '토', '일'];
 const pad = n => String(n).padStart(2, '0');
 const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 const toTime = m => `${pad(Math.floor(m / 60) % 24)}:${pad(m % 60)}`;
@@ -441,7 +460,7 @@ const dateKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDat
 const $ = id => document.getElementById(id);
 
 // ---------- 학교 공식 셔틀 시간표 ----------
-// buses: [월, 화, 수, 목, 금] 운행 대수, 0 = 미운행
+// buses: [월, 화, 수, 목, 금, 토, 일] 운행 대수, 0 = 미운행 (학교 공식 시간표는 주말 미운행)
 function officialSchedule() {
   const list = []; let id = 1;
   const add = (dir, route, stop, rows) => rows.forEach(([time, buses]) => list.push({ id: id++, dir, route, stop, time, buses }));
@@ -462,7 +481,7 @@ function officialSchedule() {
     ['12:30', F], ['16:30', W]]);
   add('하교', '학교 → 천안터미널', '학생회관 1층 앞', [
     ['12:30', F], ['16:30', W], ['16:45', W], ['17:00', W], ['17:30', W], ['18:10', W]]);
-  return list.map(r => ({ ...r, buses: [...r.buses] }));
+  return list.map(r => ({ ...r, buses: [...r.buses, 0, 0] }));
 }
 // 지난 7일 시간대별 탑승 체크 누적 (시연용 가상 데이터)
 const sampleHistory = () => ({ 8: 420, 9: 610, 10: 70, 12: 40, 15: 95, 16: 310, 17: 280, 18: 120 });
@@ -540,13 +559,15 @@ const sampleUsers = () => [
     .map(([id, name]) => ({ id, name, role: 'student', pw: hashPw(id, '1234') })),
 ];
 
-function fresh() { return { schedule: officialSchedule(), history: sampleHistory(), lost: sampleLost(), notices: sampleNotices(), users: sampleUsers(), session: null, day: null, demoTime: '', demoDay: '' }; }
+function fresh() { return { schedule: officialSchedule(), history: sampleHistory(), lost: sampleLost(), notices: sampleNotices(), users: sampleUsers(), session: null, day: null, log: {}, demoTime: '', demoDay: '' }; }
 function load() {
   try {
     const s = JSON.parse(localStorage.getItem(KEY));
     if (s && s.schedule) {
       if (!s.notices) s.notices = sampleNotices();
       if (!s.users) { s.users = sampleUsers(); s.session = null; s.day = null; }
+      s.schedule.forEach(r => { while (r.buses.length < 7) r.buses.push(0); });   // 주말 칸 추가
+      if (!s.log) s.log = {};
       return s;
     }
   } catch (e) {}
@@ -592,30 +613,79 @@ function now() {
   if (S.demoTime) { const [h, m] = S.demoTime.split(':').map(Number); d.setHours(h, m, 0, 0); }
   return d;
 }
-// 0=월 … 4=금, 주말이면 -1
+// 0=월 … 4=금, 5=토, 6=일
 function weekday() {
   if (S.demoDay) return Number(S.demoDay) - 1;
-  const g = new Date().getDay();
-  return g >= 1 && g <= 5 ? g - 1 : -1;
+  return (new Date().getDay() + 6) % 7;
 }
 // 날짜가 바뀌면 금일 운행 정보·탑승 체크 초기화
 function day() {
   const k = dateKey(new Date()) + '/' + weekday();
+  if (S.day && S.day.date !== k) saveLog(S.day);   // 날이 바뀌면 어제 기록을 남김
   if (!S.day || S.day.date !== k) { S.day = { date: k, status: {}, boardings: {}, mine: {}, waiting: {}, mineWait: {} }; mockDay(S.day); }
   return S.day;
 }
+// 하루 기록 저장: { '노선|시각': 탑승 인원 } (최근 14일만 보관)
+function saveLog(d) {
+  const [date] = d.date.split('/');
+  S.log = S.log || {};
+  const rec = {};
+  allRuns().forEach(r => { const c = d.boardings[r.id] || 0; if (c) rec[r.route + '|' + r.time] = c; });
+  if (Object.keys(rec).length) S.log[date] = rec;
+  Object.keys(S.log).sort().slice(0, -14).forEach(k => delete S.log[k]);
+}
+// 그날(날짜·요일) 운행한 회차
+const runsOn = (date, w) => [...S.schedule, ...extraRuns(date)].filter(r => busesOn(r, w) > 0);
+// 시간대별 붐비는 정도 (0~1) — 목데이터용
+function busyOf(r) {
+  const t = toMin(r.time);
+  if (r.dir === '등교') return t >= 520 && t <= 550 ? 0.95 : t >= 510 && t <= 560 ? 0.6 : 0.3;   // 08:40~09:10 피크
+  if (t >= 1260 && t <= 1320) return 0.95;            // 축제 21~22시
+  if (t >= 990 && t <= 1030) return 0.85;             // 16:30~17:10
+  if (t >= 1050 && t <= 1090 || t >= 1200) return 0.55;
+  return 0.3;
+}
+// 기록이 없는 날은 목데이터로 채움 (같은 날짜는 항상 같은 숫자)
+function mockLog(date, w) {
+  let seed = [...(date + '#' + w)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 11);
+  const rand = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+  const rec = {};
+  runsOn(date, w).forEach(r => {
+    const seats = busesOn(r, w) * SEATS_PER_BUS;
+    rec[r.route + '|' + r.time] = Math.min(seats, Math.round(seats * busyOf(r) * (0.75 + rand() * 0.5)));
+  });
+  return rec;
+}
+// 가장 최근 운행일(어제 또는 그 전)의 이용 기록
+let cmpMode = 'last';   // 비교 기준: last(어제·최근 운행일) | week(지난주 같은 요일)
+let _ldKey, _ld;
+function lastDay() {   // 같은 조건이면 계산 결과 재사용
+  const key = [cmpMode, dateKey(new Date()), weekday(), JSON.stringify(S.schedule.map(r => r.buses)), S.notices.length, Object.keys(S.log || {}).length].join('/');
+  if (key !== _ldKey) { _ldKey = key; _ld = findLastDay(); }
+  return _ld;
+}
+function findLastDay() {
+  const days = cmpMode === 'week' ? [7] : [1, 2, 3, 4, 5, 6, 7];
+  for (const i of days) {
+    const dt = new Date(); dt.setDate(dt.getDate() - i);
+    const date = dateKey(dt), w = (weekday() - i + 70) % 7;
+    const runs = runsOn(date, w);
+    if (!runs.length) continue;
+    const rec = (S.log && S.log[date]) || mockLog(date, w);
+    const short = i === 1 ? '어제' : i === 7 ? `지난주 ${DAYS[w]}요일` : `지난 ${DAYS[w]}요일`;
+    const md = S.demoDay ? '' : `${dt.getMonth() + 1}/${dt.getDate()}`;   // 시연 요일이면 실제 날짜와 안 맞아서 생략
+    const label = i === 1 ? `어제(${md ? md + ' ' : ''}${DAYS[w]})` : md ? `${short}(${md})` : short;
+    return { date, w, runs, rec, label, short };
+  }
+  return null;
+}
+const crowdOf = r => r < 0.5 ? { txt: '여유', cls: 'b-ok' } : r < 0.8 ? { txt: '보통', cls: 'b-mid' } : r < 1 ? { txt: '혼잡', cls: 'b-busy' } : { txt: '만석', cls: 'b-busy' };
+
 // 목데이터: 오늘 회차마다 탑승·대기 인원을 시간대에 맞게 채움 (같은 날은 항상 같은 숫자)
 function mockDay(d) {
   let seed = [...d.date].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
   const rand = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
-  const busy = r => {   // 시간대별 붐비는 정도 (0~1)
-    const t = toMin(r.time);
-    if (r.dir === '등교') return t >= 520 && t <= 550 ? 0.95 : t >= 510 && t <= 560 ? 0.6 : 0.3;   // 08:40~09:10 피크
-    if (t >= 1260 && t <= 1320) return 0.95;            // 축제 21~22시
-    if (t >= 990 && t <= 1030) return 0.85;             // 16:30~17:10
-    if (t >= 1050 && t <= 1090 || t >= 1200) return 0.55;
-    return 0.3;
-  };
+  const busy = busyOf;
   todayRuns().forEach(r => {
     const seats = busesToday(r) * SEATS_PER_BUS;
     const total = Math.round(seats * busy(r) * (0.7 + rand() * 0.6));
@@ -636,17 +706,18 @@ function mockDay(d) {
 
 // ---------- 계산 ----------
 // 오늘 날짜에 걸려 있는 공지
-const activeNotices = () => { const k = dateKey(new Date()); return S.notices.filter(n => (!n.from || n.from <= k) && (!n.to || k <= n.to)); };
+const activeNotices = (k = dateKey(new Date())) => S.notices.filter(n => (!n.from || n.from <= k) && (!n.to || k <= n.to));
 // 노선 이름으로 구분·탑승 장소 찾기
 const routeMeta = rt => S.schedule.find(r => r.route === rt) || { dir: '하교', stop: '학생회관 1층 앞' };
 // 공지에 붙은 연장·추가 운행 회차 → 오늘 운행 목록에 합침 (요일과 무관하게 공지 기간 동안 운행)
-function extraRuns() {
-  return activeNotices().flatMap(n => (n.extra || []).map((e, k) => {
+function extraRuns(k) {
+  return activeNotices(k).flatMap(n => (n.extra || []).map((e, k) => {
     const m = routeMeta(e.route);
     return { id: 10000 + n.id * 100 + k, dir: m.dir, route: e.route, stop: m.stop, time: e.time, fixed: e.buses, tag: n.tag || '추가 운행' };
   }));
 }
-const busesToday = run => { if (run.fixed != null) return run.fixed; const w = weekday(); return w < 0 ? 0 : run.buses[w] || 0; };
+const busesOn = (run, w) => run.fixed != null ? run.fixed : run.buses[w] || 0;
+const busesToday = run => busesOn(run, weekday());
 const allRuns = () => [...S.schedule, ...extraRuns()];
 const todayRuns = () => allRuns().filter(r => busesToday(r) > 0);
 const findRun = id => allRuns().find(r => r.id === id);
@@ -728,7 +799,7 @@ function render() {
   document.body.classList.toggle('admin', !!u && u.role === 'admin');
   $('userBox').innerHTML = u ? `<div class="who">${u.role === 'admin' ? '🛠' : '🎓'} ${esc(u.name)}님</div><button class="btn ghost" data-logout="1">로그아웃</button>` : '';
   const n = now(); const w = weekday();
-  const dayName = w < 0 ? ['일', '월', '화', '수', '목', '금', '토'][n.getDay()] : DAYS[w];
+  const dayName = DAYS[w];
   $('today').textContent = `${n.getMonth() + 1}월 ${n.getDate()}일 (${dayName}) ${pad(n.getHours())}:${pad(n.getMinutes())}`
     + (S.demoDay || S.demoTime ? ' · 시연 모드' : '');
   if (!u) return;
@@ -749,8 +820,9 @@ function renderHome() {
     `<button class="chip ${r === route ? 'on' : ''}" data-route="${r}">${r}</button>`).join('');
 
   renderBanner();
+  renderLastCard();
   if (!todayRuns().length) {
-    $('nextCard').innerHTML = `<div class="card"><b>${weekday() < 0 ? '주말에는 셔틀이 운행하지 않아요' : '오늘 운행하는 셔틀이 없어요'}</b><p class="muted" style="margin:6px 0 0">관리자 페이지의 시연 도구에서 요일을 골라 볼 수 있어요.</p></div>`;
+    $('nextCard').innerHTML = `<div class="card"><b>${weekday() >= 5 ? '이번 주말에는 운행하는 셔틀이 없어요' : '오늘 운행하는 셔틀이 없어요'}</b><p class="muted" style="margin:6px 0 0">관리자 페이지의 시연 도구에서 요일을 골라 볼 수 있어요.</p></div>`;
     $('runList').innerHTML = '<p class="muted" style="margin:0">오늘 운행하는 회차가 없어요.</p>';
     $('waitBoard').classList.add('hidden');
     $('qSummary').textContent = ''; $('timeChips').innerHTML = ''; $('qReset').classList.add('hidden');
@@ -771,6 +843,7 @@ function renderHome() {
       <div class="meta">${when} · ${statusText(next)} · ${next.buses}대 운행</div>
       <div class="meta" style="margin-top:6px">혼잡도 <b>${next.level.txt}</b> · 대기 <b>${next.waiting}</b>명 · 탑승 <b>${next.count}</b>명 · 잔여 <b>${next.left}</b>/${next.seats}석</div>
       <div class="hint">${waitHint(next).warn ? '⚠️' : '💡'} ${waitHint(next).txt}</div>
+      ${ydNext(next)}
       ${next.mine
         ? `<button class="btn" data-unboard="${next.run.id}">✓ 탑승 체크됨 (취소)</button>`
         : `<div class="btns">
@@ -837,8 +910,67 @@ function renderHome() {
         </div>
       </div>
       ${i.st.state === 'cancel' ? '' : `<div class="bar"><i style="width:${Math.min(i.ratio * 100, 100)}%;background:${i.level.color}"></i></div>
-      <div class="seats">대기 ${i.waiting}명 · 탑승 ${i.count}명 · 잔여 ${i.left}석${i.mineWait ? ' · <b style="color:var(--primary)">내가 대기 중</b>' : ''}</div>`}
+      <div class="seats">대기 ${i.waiting}명 · 탑승 ${i.count}명 · 잔여 ${i.left}석${i.mineWait ? ' · <b style="color:var(--primary)">내가 대기 중</b>' : ''}${yd(i)}</div>`}
     </div>`).join('') : emptyHtml);
+}
+
+// ---------- 지난 운행일 이용 현황 (학생도 보는 화면) ----------
+// 회차 줄에 붙는 '어제 이 차 N명'
+function yd(i) {
+  const L = lastDay(); const c = L && L.rec[i.run.route + '|' + i.run.time];
+  if (c == null) return '';
+  return ` · <span class="yd">${L.short} ${c}명</span>`;
+}
+function ydNext(i) {
+  const L = lastDay(); const c = L && L.rec[i.run.route + '|' + i.run.time];
+  if (c == null) return '';
+  const cr = crowdOf(c / i.seats);
+  return `<div class="meta" style="margin-top:6px">📊 ${L.short} 같은 차: <b>${c}</b>/${i.seats}명 (${cr.txt})</div>`;
+}
+// 시간대별 막대그래프 + 예상 문구
+function renderLastCard() {
+  const L = lastDay();
+  const toggle = `<div class="seg" style="margin:8px 0 0">${[['last', '어제·최근 운행일'], ['week', '지난주 같은 요일']].map(([k, t]) =>
+    `<button class="${cmpMode === k ? 'on' : ''}" data-cmp="${k}">${t}</button>`).join('')}</div>`;
+  if (!L) {
+    $('lastCard').classList.remove('hidden');
+    $('lastCard').innerHTML = `<h2>📊 지난 이용 현황</h2><p class="muted" style="margin:0">${cmpMode === 'week' ? `지난주 ${DAYS[weekday()]}요일에는 운행이 없었어요.` : '최근 일주일 동안 운행 기록이 없어요.'}</p>${toggle}`;
+    return;
+  }
+  const runs = L.runs.filter(r => r.dir === dir && (route === '전체' || r.route === route) && textMatch(r));
+  const byHour = {}, capHour = {};
+  runs.forEach(r => {
+    const h = Math.floor(toMin(r.time) / 60);
+    byHour[h] = (byHour[h] || 0) + (L.rec[r.route + '|' + r.time] || 0);
+    capHour[h] = (capHour[h] || 0) + busesOn(r, L.w) * SEATS_PER_BUS;
+  });
+  const hours = Object.keys(byHour).map(Number).sort((a, b) => a - b);
+  $('lastCard').classList.remove('hidden');
+  if (!hours.length) {
+    $('lastCard').innerHTML = `<h2>📊 ${L.label} ${dir} 이용</h2><p class="muted" style="margin:0">이 조건으로는 ${L.short} 운행 기록이 없어요.</p>${toggle}`;
+    return;
+  }
+  const max = Math.max(1, ...hours.map(h => byHour[h]));
+  const peak = hours.reduce((p, h) => byHour[h] > byHour[p] ? h : p, hours[0]);
+  const n = now(); const nowH = q.mode === 'hour' ? q.hour : n.getHours();
+  const total = hours.reduce((a, h) => a + byHour[h], 0);
+  // 예상 문구: 지금(또는 검색한) 시간대 → 없으면 다음 운행 시간대
+  const target = hours.find(h => h >= nowH);
+  let say;
+  if (target == null) say = `${L.short} 이 시간 이후로는 ${dir} 운행이 없었어요.`;
+  else {
+    const cr = crowdOf(byHour[target] / capHour[target]);
+    const when = target === nowH ? (q.mode === 'hour' ? `${target}시대` : `지금 ${target}시대`) : `다음 운행 ${target}시대`;
+    say = `${when}는 ${L.short} <b>${byHour[target]}명</b>이 탔어요 → <b>${cr.txt === '여유' ? '여유 있을 것 같아요' : cr.txt === '보통' ? '조금 붐빌 수 있어요' : '많이 붐빌 것 같아요'}</b>`;
+    if (target !== peak) say += `<br>가장 붐볐던 시간은 <b>${peak}시대</b>(${byHour[peak]}명)예요.`;
+  }
+  $('lastCard').innerHTML = `
+    <div class="row between"><h2>📊 ${L.label} ${dir} 이용</h2><span class="muted">총 ${total}명</span></div>
+    <div class="muted" style="font-size:12px">시간대별 탑승 인원으로 오늘 붐빌 시간을 예상해 보세요.</div>
+    <div class="chart">${hours.map(h => `<div class="col ${h === nowH ? 'now' : h === peak ? 'peak' : ''}">
+      <b>${byHour[h]}</b><i style="height:${byHour[h] / max * 100}%"></i><span>${h}시</span></div>`).join('')}</div>
+    <div class="legend"><span><i style="background:var(--primary)"></i>${q.mode === 'hour' ? '검색한 시간' : '지금 시간'}</span><span><i style="background:#ee6c6e"></i>가장 붐빈 시간</span></div>
+    <div class="say">${say}</div>${toggle}`;
 }
 
 // 시간대 버튼: 지금 보고 있는 등교/하교에 실제로 운행이 있는 시간만 (회차 수 함께 표시)
@@ -1025,7 +1157,9 @@ function renderWeek() {
   $('weekSeg').innerHTML = ['등교', '하교'].map(d => `<button class="${d === weekDir ? 'on' : ''}" data-weekdir="${d}">${d}</button>`).join('');
   $('seatPer').textContent = SEATS_PER_BUS;
   const w = weekday();
-  const head = `<tr><th>시간</th>${DAYS.map((d, k) => `<th class="${k === w ? 'today' : ''}">${d}</th>`).join('')}</tr>`;
+  const hasWeekend = S.schedule.some(r => r.dir === weekDir && (r.buses[5] || r.buses[6]));
+  const cols = hasWeekend ? 7 : 5;   // 주말 운행이 하나라도 있으면 토·일 칸까지
+  const head = `<tr><th>시간</th>${DAYS.slice(0, cols).map((d, k) => `<th class="${k === w ? 'today' : ''} ${k >= 5 ? 'wk' : ''}">${d}</th>`).join('')}</tr>`;
   // 역 버튼: 이 방향 시간표에 있는 역들 (등교/하교를 바꿔도 같은 역을 유지)
   const routes = [...new Set(S.schedule.filter(r => r.dir === weekDir).map(r => r.route))];
   const stations = [...new Set(routes.map(stationOf))];
@@ -1037,9 +1171,9 @@ function renderWeek() {
   const body = routes.filter(rt => stationOf(rt) === weekStation).map(rt => {
     const runs = sorted(S.schedule.filter(r => r.route === rt));
     if (!runs.length) return '';
-    return `<tr class="grp"><td colspan="6">${rt}<br><span class="muted" style="font-weight:400">📍 ${esc(runs[0].stop)}</span></td></tr>` +
-      runs.map(r => `<tr><td><b>${r.time}</b></td>${r.buses.map((b, k) =>
-        `<td class="${b === 0 ? 'off' : b > 1 ? 'two' : ''} ${k === w ? 'today' : ''}">${b === 0 ? '미운행' : b + '대'}</td>`).join('')}</tr>`).join('');
+    return `<tr class="grp"><td colspan="${cols + 1}">${rt}<br><span class="muted" style="font-weight:400">📍 ${esc(runs[0].stop)}</span></td></tr>` +
+      runs.map(r => `<tr><td><b>${r.time}</b></td>${r.buses.slice(0, cols).map((b, k) =>
+        `<td class="${b === 0 ? 'off' : b > 1 ? 'two' : ''} ${k === w ? 'today' : ''} ${k >= 5 ? 'wk' : ''}">${b === 0 ? (cols > 5 ? '✕' : '미운행') : b + '대'}</td>`).join('')}</tr>`).join('');
   }).join('');
   $('weekTable').innerHTML = head + body;
 }
@@ -1110,11 +1244,11 @@ function renderAdmin() {
   $('routeList').innerHTML = [...new Set(S.schedule.map(r => r.route))].map(r => `<option value="${r}">`).join('');
   $('stopList').innerHTML = [...new Set(S.schedule.map(r => r.stop))].map(r => `<option value="${esc(r)}">`).join('');
   if (!$('addDays').children.length)
-    $('addDays').innerHTML = DAYS.map((d, k) => `<div><span>${d}</span><input type="number" min="0" max="9" value="1" data-day="${k}" /></div>`).join('');
+    $('addDays').innerHTML = DAYS.map((d, k) => `<div class="${k >= 5 ? 'wk' : ''}"><span>${d}</span><input type="number" min="0" max="9" value="${k < 5 ? 1 : 0}" data-day="${k}" /></div>`).join('');
 
   $('schedList').innerHTML = sorted(S.schedule).map(r => `
     <div class="row between run">
-      <div><b>${r.time}</b> <span class="muted">[${r.dir}] ${r.route}<br>${r.buses.map((b, k) => DAYS[k] + (b ? b : '✕')).join(' ')}</span></div>
+      <div><b>${r.time}</b> <span class="muted">[${r.dir}] ${r.route}<br>${r.buses.map((b, k) => b ? DAYS[k] + b : '').filter(Boolean).join(' ') || '운행 없음'}${r.buses[5] || r.buses[6] ? ' <span class="badge b-wk">주말</span>' : ''}</span></div>
       <button class="btn ghost" data-del="${r.id}">삭제</button>
     </div>`).join('');
   $('demoTime').value = S.demoTime || '';
@@ -1133,6 +1267,11 @@ document.addEventListener('click', e => {
   if (b.dataset.dir) { dir = b.dataset.dir; route = '전체'; if (q.mode === 'hour') q.mode = 'now'; renderHome(); }
   if (b.dataset.route) { route = b.dataset.route; renderHome(); }
   if (b.dataset.weekdir) { weekDir = b.dataset.weekdir; renderWeek(); }
+  if (b.dataset.cmp) { cmpMode = b.dataset.cmp; renderHome(); }
+  if (b.dataset.preset) {   // 시간표 등록: 요일 빠른 선택
+    const on = { weekday: k => k < 5, weekend: k => k >= 5, all: () => true }[b.dataset.preset];
+    document.querySelectorAll('#addDays input').forEach((x, k) => x.value = on(k) ? Math.max(1, Number(x.value) || 1) : 0);
+  }
   if (b.dataset.station) { weekStation = b.dataset.station; renderWeek(); }
   if (b.dataset.board) board(Number(b.dataset.board));
   if (b.dataset.unboard) unboard(Number(b.dataset.unboard));
