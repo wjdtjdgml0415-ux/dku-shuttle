@@ -127,10 +127,17 @@
     <div class="card admin-head">
       <div style="font-size:12px;opacity:.7">ADMIN</div>
       <div style="font-size:18px;font-weight:700;margin:2px 0">🛠 관리자 페이지</div>
-      <div style="font-size:13px;opacity:.85">운행 정보 · 시간표 · 학교 공지 · 회원을 관리해요. 분실물 글도 모두 수정·삭제할 수 있어요.</div>
+      <div style="font-size:13px;opacity:.85">아래 탭에서 운행 정보 · 공지 · 시간표 · 회원을 관리해요.</div>
       <div class="stat-row" id="adminSummary" style="margin:12px 0 0;color:var(--text)"></div>
     </div>
-    <div class="card">
+    <div class="seg atabs" id="adminSeg">
+      <button class="on" data-atab="run">운행</button>
+      <button data-atab="notice">공지</button>
+      <button data-atab="sched">시간표</button>
+      <button data-atab="users">회원</button>
+      <button data-atab="demo">시연</button>
+    </div>
+    <div class="card" data-apane="run">
       <h2>금일 운행 정보 등록</h2>
       <div class="grid">
         <div class="full"><label>회차 선택 (오늘 운행 회차)</label><select id="stRun"></select></div>
@@ -140,9 +147,10 @@
         <div class="full"><label>안내 문구 (선택)</label><input id="stNote" placeholder="예: 교통 정체로 지연" /></div>
         <div class="full"><button class="btn" style="width:100%" id="stSave">운행 정보 저장</button></div>
       </div>
+      <div id="stList" style="margin-top:12px"></div>
     </div>
 
-    <div class="card">
+    <div class="card" data-apane="notice">
       <h2>학교 공지 등록</h2>
       <div class="grid">
         <div class="full"><label>제목</label><input id="nfTitle" placeholder="예: 축제 기간 셔틀 연장 운행" /></div>
@@ -164,7 +172,7 @@
       <div id="noticeAdmin" style="margin-top:12px"></div>
     </div>
 
-    <div class="card">
+    <div class="card" data-apane="sched">
       <h2>셔틀 시간표 등록</h2>
       <div class="grid">
         <div><label>구분</label><select id="addDir"><option>등교</option><option>하교</option></select></div>
@@ -180,15 +188,19 @@
           <div class="days" id="addDays"></div></div>
         <div class="full"><button class="btn" style="width:100%" id="addSave">시간표에 추가</button></div>
       </div>
-      <div id="schedList" style="margin-top:12px"></div>
+      <details class="fold" style="margin-top:14px">
+        <summary>등록된 회차 보기 <span class="muted" id="schedCount"></span></summary>
+        <div class="seg" style="margin:10px 0 4px" id="schedSeg"><button class="on" data-sdir="등교">등교</button><button data-sdir="하교">하교</button></div>
+        <div id="schedList"></div>
+      </details>
     </div>
 
-    <div class="card">
+    <div class="card" data-apane="users">
       <h2>회원 관리</h2>
       <div id="userList"></div>
     </div>
 
-    <div class="card">
+    <div class="card" data-apane="demo">
       <h2>시연 도구</h2>
       <div class="grid">
         <div><label>시연용 요일</label>

@@ -354,6 +354,7 @@ function render() {
   renderHome(); renderWeek(); renderNotices();
   if (!$('lostList').contains(document.activeElement)) renderLost();   // 댓글 입력 중엔 다시 그리지 않음
   if (u.role === 'admin') { renderStats(); renderAdmin(); renderUsers(); }
+  fixTab();
 }
 
 function statusText(i) {
@@ -788,13 +789,21 @@ function renderAdmin() {
     return `<option value="${r.id}">[${r.dir}] ${r.time} ${r.route}${tag}</option>`;
   }).join('') : '<option value="">오늘 운행 회차 없음</option>';
   if (cur && runs.some(r => String(r.id) === cur)) $('stRun').value = cur;
+  const changed = runs.filter(r => day().status[r.id]);
+  $('stList').innerHTML = `<div class="muted" style="margin-bottom:6px">오늘 지연·취소된 회차 ${changed.length}개</div>` + changed.map(r => {
+    const st = day().status[r.id];
+    return `<div class="row between run"><div><b>${r.time}</b> <span class="muted">[${r.dir}] ${r.route}<br>${st.state === 'cancel' ? '운행 취소' : st.delay + '분 지연'}${st.note ? ' · ' + esc(st.note) : ''}</span></div>
+      <button class="btn ghost" data-streset="${r.id}">정상으로</button></div>`;
+  }).join('');
 
   $('routeList').innerHTML = [...new Set(S.schedule.map(r => r.route))].map(r => `<option value="${r}">`).join('');
   $('stopList').innerHTML = [...new Set(S.schedule.map(r => r.stop))].map(r => `<option value="${esc(r)}">`).join('');
   if (!$('addDays').children.length)
     $('addDays').innerHTML = DAYS.map((d, k) => `<div class="${k >= 5 ? 'wk' : ''}"><span>${d}</span><input type="number" min="0" max="9" value="${k < 5 ? 1 : 0}" data-day="${k}" /></div>`).join('');
 
-  $('schedList').innerHTML = sorted(S.schedule).map(r => `
+  $('schedCount').textContent = `(${S.schedule.length}개)`;
+  document.querySelectorAll('#schedSeg button').forEach(x => x.classList.toggle('on', x.dataset.sdir === schedDir));
+  $('schedList').innerHTML = sorted(S.schedule.filter(r => r.dir === schedDir)).map(r => `
     <div class="row between run">
       <div><b>${r.time}</b> <span class="muted">[${r.dir}] ${r.route}<br>${r.buses.map((b, k) => b ? DAYS[k] + b : '').filter(Boolean).join(' ') || '운행 없음'}${r.buses[5] || r.buses[6] ? ' <span class="badge b-wk">주말</span>' : ''}</span></div>
       <button class="btn ghost" data-del="${r.id}">삭제</button>
@@ -803,15 +812,36 @@ function renderAdmin() {
   $('demoDay').value = S.demoDay || '';
 }
 
+// ---------- 탭 이동 ----------
+// 관리자는 오늘 운행·시간표 탭 대신 분실물·통계·관리자 탭만 사용
+const STUDENT_TABS = ['home', 'week', 'lost'], ADMIN_TABS = ['lost', 'stats', 'admin'];
+let curTab = 'home', adminTab = 'run', schedDir = '등교';
+function goTab(t) {
+  curTab = t;
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x.dataset.tab === t));
+  ['home', 'week', 'lost', 'stats', 'admin'].forEach(k => $('tab-' + k).classList.toggle('hidden', k !== t));
+  window.scrollTo(0, 0);
+}
+function fixTab() {   // 로그인한 사람의 역할에 맞지 않는 탭이면 기본 탭으로
+  if (!me()) return;
+  const ok = isAdmin() ? ADMIN_TABS : STUDENT_TABS;
+  if (!ok.includes(curTab)) goTab(isAdmin() ? 'admin' : 'home');
+}
+function showAdminTab() {
+  document.querySelectorAll('#adminSeg button').forEach(x => x.classList.toggle('on', x.dataset.atab === adminTab));
+  document.querySelectorAll('[data-apane]').forEach(x => x.classList.toggle('hidden', x.dataset.apane !== adminTab));
+}
+
 // ---------- 이벤트 ----------
 document.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.tab) {
     if ((b.dataset.tab === 'admin' || b.dataset.tab === 'stats') && !isAdmin()) return toast('관리자만 들어갈 수 있어요');
-    document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
-    ['home', 'week', 'lost', 'stats', 'admin'].forEach(t => $('tab-' + t).classList.toggle('hidden', t !== b.dataset.tab));
-    window.scrollTo(0, 0);
+    goTab(b.dataset.tab);
   }
+  if (b.dataset.sdir) { schedDir = b.dataset.sdir; renderAdmin(); }
+  if (b.dataset.atab) { adminTab = b.dataset.atab; showAdminTab(); window.scrollTo(0, 0); }
+  if (b.dataset.streset && isAdmin()) { delete day().status[b.dataset.streset]; save(); toast('정상 운행으로 되돌렸어요'); render(); }
   if (b.dataset.dir) { dir = b.dataset.dir; route = '전체'; if (q.mode === 'hour') q.mode = 'now'; renderHome(); }
   if (b.dataset.route) { route = b.dataset.route; renderHome(); }
   if (b.dataset.weekdir) { weekDir = b.dataset.weekdir; renderWeek(); }
@@ -831,7 +861,7 @@ document.addEventListener('click', e => {
   if (b.dataset.gonotice) {
     const ex = activeNotices().some(n => (n.extra || []).length);
     if (ex) { dir = '하교'; route = '전체'; renderHome(); }   // 연장 운행 공지면 하교 목록으로
-    document.querySelector(ex ? '#runList' : 'nav [data-tab=week]')[ex ? 'scrollIntoView' : 'click']();
+    ex ? $('runList').scrollIntoView() : goTab('week');
   }
   if ((b.dataset.nfdel || b.dataset.ntcdel || b.dataset.del || b.dataset.role || b.dataset.udel) && !isAdmin()) return toast('관리자만 할 수 있어요');
   if (b.dataset.role) {
@@ -855,7 +885,7 @@ document.addEventListener('click', e => {
   }
   if (b.dataset.logout) {
     S.session = null; save();
-    document.querySelector('nav [data-tab=home]').click();
+    goTab('home');
     render(); toast('로그아웃했어요');
   }
   if (b.dataset.nfdel) { nfRuns.splice(Number(b.dataset.nfdel), 1); renderNotices(); }
@@ -1018,7 +1048,8 @@ function login(id) {
   S.session = id; save();
   dir = '등교'; route = '전체'; showPast = false;
   openCmts.clear(); for (const k in cmtDraft) delete cmtDraft[k];
-  document.querySelector('nav [data-tab=home]').click();
+  adminTab = 'run'; showAdminTab();
+  goTab(isAdmin() ? 'admin' : 'home');
   render(); toast(`${userName(id)}님, 환영해요!`);
 }
 $('liBtn').onclick = () => {
@@ -1046,5 +1077,6 @@ $('demoReset').onclick = adminOnly(() => {
 });
 
 if (/\.netlify\.app$/.test(location.hostname)) document.body.classList.add('nl-badge');
+showAdminTab();
 render();
 setInterval(render, 30000);
