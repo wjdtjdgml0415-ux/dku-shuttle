@@ -12,6 +12,18 @@
 | 셔틀 시간표를 직접 찾아봐야 함 | 시간표와 실제 운영 상황을 한 번에 확인 |
 | 셔틀이 얼마나 붐비는지 알기 어려움 | 탑승 체크 정보로 남은 좌석 확인 |
 
+## 화면
+
+| 오늘 운행 (학생) | 시간표 | 분실물 |
+|:---:|:---:|:---:|
+| <img src="docs/images/home.png" width="240" alt="오늘 운행 화면"> | <img src="docs/images/week.png" width="240" alt="시간표 화면"> | <img src="docs/images/lost.png" width="240" alt="분실물 화면"> |
+| 다음 셔틀, 혼잡도, 어제 이용 현황 | 정류장별 요일 운행 대수 | 분실물 등록과 댓글 |
+
+| 통계 (관리자) | 관리자 페이지 |
+|:---:|:---:|
+| <img src="docs/images/stats.png" width="240" alt="통계 화면"> | <img src="docs/images/admin.png" width="240" alt="관리자 화면"> |
+| 시간대별 이용자 수 | 운행 정보·공지·시간표 관리 |
+
 ## 시연용 계정
 
 | 구분 | 아이디 | 비밀번호 |
@@ -44,13 +56,27 @@
 
 ## 사용 기술
 
-- HTML, CSS, JavaScript (프레임워크 없이 `index.html` 파일 하나)
+- HTML, CSS, JavaScript (프레임워크·빌드 도구 없음)
 - 데이터 저장: 브라우저 `localStorage`
 - 배포: Netlify, GitHub Pages
 
+## 폴더 구조
+
+```
+dku-shuttle/
+├── index.html        # 화면 구조 (탭, 로그인, 관리자 폼)
+├── css/
+│   └── style.css     # 디자인 (단국대 포털 색상)
+├── js/
+│   └── app.js        # 기능 (시간표, 탑승 체크, 혼잡도, 통계, 분실물, 관리자)
+├── docs/
+│   └── images/       # README 화면 캡처
+└── README.md
+```
+
 ## 실행 방법
 
-`index.html`을 브라우저로 열면 바로 실행됩니다. 별도 설치나 빌드는 필요 없습니다.
+폴더를 내려받아 `index.html`을 브라우저로 열면 바로 실행됩니다. 별도 설치나 빌드는 필요 없습니다.
 
 ```bash
 # 로컬 서버로 열 때
