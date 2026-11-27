@@ -143,6 +143,9 @@ let editingLost = null;   // 관리자가 수정 중인 분실물 글 id
 const openCmts = new Set();   // 댓글을 펼쳐 둔 분실물 글 id
 const cmtDraft = {};          // 작성 중인 댓글 (화면이 다시 그려져도 유지)
 let showPast = false;  // 지난 회차 펼치기
+let showAllRuns = false;  // 회차 목록 전체 보기 (기본은 앞의 5개만)
+let showChart = false;    // 지난 이용 그래프 펼치기
+const RUN_PREVIEW = 5;
 // 홈 검색 조건: mode = now(지금 이후) | hour(특정 시간대) | all(하루 전체)
 let q = { text: '', mode: 'now', hour: null };
 const textMatch = run => {
@@ -439,6 +442,9 @@ function renderHome() {
       : '<span class="muted">오늘 남은 운행이 없어요.</span>'}</div>`;
   }
 
+  const more = shown.length - RUN_PREVIEW;
+  const moreBtn = more > 0 ? `<button class="btn ghost" style="width:100%;margin-top:10px" data-moreruns="1">${showAllRuns ? '접기' : `회차 ${more}개 더 보기`}</button>` : '';
+  if (more > 0 && !showAllRuns) shown = shown.slice(0, RUN_PREVIEW);
   $('runList').innerHTML = noticeHtml + pastBtn + (shown.length ? shown.map(i => `
     <div class="run ${i.past ? 'past' : ''}">
       <div class="row between">
@@ -460,7 +466,7 @@ function renderHome() {
       </div>
       ${i.st.state === 'cancel' ? '' : `<div class="bar"><i style="width:${Math.min(i.ratio * 100, 100)}%;background:${i.level.color}"></i></div>
       <div class="seats">대기 ${i.waiting}명 · 탑승 ${i.count}명 · 잔여 ${i.left}석${i.mineWait ? ' · <b style="color:var(--primary)">내가 대기 중</b>' : ''}${yd(i)}</div>`}
-    </div>`).join('') : emptyHtml);
+    </div>`).join('') + moreBtn : emptyHtml);
 }
 
 // ---------- 지난 운행일 이용 현황 (학생도 보는 화면) ----------
@@ -515,11 +521,12 @@ function renderLastCard() {
   }
   $('lastCard').innerHTML = `
     <div class="row between"><h2>📊 ${L.label} ${dir} 이용</h2><span class="muted">총 ${total}명</span></div>
-    <div class="muted" style="font-size:12px">시간대별 탑승 인원으로 오늘 붐빌 시간을 예상해 보세요.</div>
-    <div class="chart">${hours.map(h => `<div class="col ${h === nowH ? 'now' : h === peak ? 'peak' : ''}">
+    <div class="say" style="margin-top:4px">${say}</div>
+    <button class="linkbtn" data-chart="1">${showChart ? '그래프 접기 ▴' : '시간대별 그래프 보기 ▾'}</button>
+    ${showChart ? `<div class="chart">${hours.map(h => `<div class="col ${h === nowH ? 'now' : h === peak ? 'peak' : ''}">
       <b>${byHour[h]}</b><i style="height:${byHour[h] / max * 100}%"></i><span>${h}시</span></div>`).join('')}</div>
     <div class="legend"><span><i style="background:var(--primary)"></i>${q.mode === 'hour' ? '검색한 시간' : '지금 시간'}</span><span><i style="background:#ee6c6e"></i>가장 붐빈 시간</span></div>
-    <div class="say">${say}</div>${toggle}`;
+    ${toggle}` : ''}`;
 }
 
 // 시간대 버튼: 지금 보고 있는 등교/하교에 실제로 운행이 있는 시간만 (회차 수 함께 표시)
@@ -546,7 +553,8 @@ function renderBanner() {
   $('noticeBanner').innerHTML = list.map(n => {
     const ex = n.extra || [];
     const last = ex.length ? ex.map(e => e.time).sort().pop() : '';
-    return `<button class="banner ${ex.length ? '' : 'plain'}" data-gonotice="1">
+    if (!ex.length) return `<button class="banner plain mini" data-gonotice="1">📢 <b>${esc(n.title)}</b><span>›</span></button>`;
+    return `<button class="banner" data-gonotice="1">
       <div class="k">📢 학교 공지${n.tag ? ' · ' + esc(n.tag) : ''} · ${period(n)}</div>
       <div class="ttl">${esc(n.title)}</div>
       <div class="s">${ex.length ? `오늘 추가 운행 ${ex.length}회 · 막차 ${last} · 하교 탭에서 확인 ›` : '자세히 보기 ›'}</div>
@@ -842,6 +850,9 @@ document.addEventListener('click', e => {
   if (b.dataset.sdir) { schedDir = b.dataset.sdir; renderAdmin(); }
   if (b.dataset.atab) { adminTab = b.dataset.atab; showAdminTab(); window.scrollTo(0, 0); }
   if (b.dataset.streset && isAdmin()) { delete day().status[b.dataset.streset]; save(); toast('정상 운행으로 되돌렸어요'); render(); }
+  if (b.dataset.dir || b.dataset.route || b.dataset.qmode || b.dataset.qhour) showAllRuns = false;
+  if (b.dataset.moreruns) { showAllRuns = !showAllRuns; renderHome(); if (!showAllRuns) $('runList').scrollIntoView({ block: 'start' }); }
+  if (b.dataset.chart) { showChart = !showChart; renderHome(); }
   if (b.dataset.dir) { dir = b.dataset.dir; route = '전체'; if (q.mode === 'hour') q.mode = 'now'; renderHome(); }
   if (b.dataset.route) { route = b.dataset.route; renderHome(); }
   if (b.dataset.weekdir) { weekDir = b.dataset.weekdir; renderWeek(); }
@@ -1040,13 +1051,13 @@ $('lfSave').onclick = async () => {
   lostMode = '전체'; renderLost(); toast(msg);
 };
 // ---------- 홈 검색 ----------
-$('qText').oninput = e => { q.text = e.target.value; renderHome(); };
-$('qReset').onclick = () => { q = { text: '', mode: 'now', hour: null }; route = '전체'; showPast = false; $('qText').value = ''; renderHome(); };
+$('qText').oninput = e => { q.text = e.target.value; showAllRuns = false; renderHome(); };
+$('qReset').onclick = () => { q = { text: '', mode: 'now', hour: null }; route = '전체'; showPast = false; showAllRuns = false; $('qText').value = ''; renderHome(); };
 
 // ---------- 로그인 / 회원가입 ----------
 function login(id) {
   S.session = id; save();
-  dir = '등교'; route = '전체'; showPast = false;
+  dir = '등교'; route = '전체'; showPast = false; showAllRuns = false; showChart = false;
   openCmts.clear(); for (const k in cmtDraft) delete cmtDraft[k];
   adminTab = 'run'; showAdminTab();
   goTab(isAdmin() ? 'admin' : 'home');
