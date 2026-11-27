@@ -1,1 +1,4 @@
 과제정의서.md
+.env
+.env.local
+.env.*.local
